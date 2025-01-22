@@ -170,8 +170,10 @@ This study proposes an efficient resource allocation strategy for securing inter
 
 [16] R. A. Rossi and N. K. Ahmed, ‘‘The network data repository with interactive graph analytics and visualization,’’ in Proceedings of the Twenty-Ninth AAAI Conference on Artificial Intelligence, 2015. [Online]. Available: http://networkrepository.com.
 
-# Contact With The Developer
+# Contact With The Authors
 
-Send email to the following developer for any question about this work, and it is my pleasure to ansawer your question.
+Send email to the following Authors for any question about this work, and it is our pleasure to ansawer your question.
 
-Mohammad Aleiadeh, mraleiad@iu.edu or maleiade@purdue.edu
+Mohammad Aleiadeh, maleiade@purdue.edu
+
+Mustafa Abdallah, abdalla0@purdue.edu
