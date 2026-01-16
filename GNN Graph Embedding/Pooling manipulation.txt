@@ -1,0 +1,15 @@
+# Compute the graph embedding by averaging node embeddings
+graph_embedding <- node_embeddings$mean(dim = 1)  # Mean across nodes (dim=1 corresponds to averaging rows)
+
+
+
+
+# Compute the graph embedding by summing node embeddings
+graph_embedding <- node_embeddings$sum(dim = 1)  # Sum across nodes (dim=1 corresponds to summing rows)
+
+
+
+
+# Compute the weighted sum of node embeddings using the attention scores
+weighted_embeddings <- h * attention_scores  # Element-wise multiplication
+graph_embedding <- weighted_embeddings$sum(dim = 1)  # Sum across nodes to get graph-level embedding
