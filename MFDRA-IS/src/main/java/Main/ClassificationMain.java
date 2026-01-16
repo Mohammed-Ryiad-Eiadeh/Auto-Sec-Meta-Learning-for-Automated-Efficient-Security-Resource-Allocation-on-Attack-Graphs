@@ -1,6 +1,7 @@
 package Main;
 
 import StoreRetrieveHashmap.org.RetrieveResourceAllocationAndTopAllocationAsHashMap;
+import org.apache.commons.math3.stat.inference.WilcoxonSignedRankTest;
 import org.tribuo.Example;
 import org.tribuo.Model;
 import org.tribuo.MutableDataset;
@@ -24,11 +25,7 @@ import org.tribuo.data.columnar.processors.field.DoubleFieldProcessor;
 import org.tribuo.data.columnar.processors.field.IdentityProcessor;
 import org.tribuo.data.columnar.processors.response.FieldResponseProcessor;
 import org.tribuo.data.csv.CSVDataSource;
-import org.tribuo.interop.tensorflow.DenseFeatureConverter;
-import org.tribuo.interop.tensorflow.GradientOptimiser;
-import org.tribuo.interop.tensorflow.ImageConverter;
-import org.tribuo.interop.tensorflow.LabelConverter;
-import org.tribuo.interop.tensorflow.TensorFlowTrainer;
+import org.tribuo.interop.tensorflow.*;
 import org.tribuo.interop.tensorflow.example.CNNExamples;
 import org.tribuo.interop.tensorflow.example.MLPExamples;
 import org.tribuo.math.distance.DistanceType;
@@ -42,22 +39,18 @@ import org.tribuo.util.Util;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 public class ClassificationMain implements RetrieveResourceAllocationAndTopAllocationAsHashMap {
     public static void main(String[] args) throws IOException {
-        // creat row processor to handle the header of the data
+        // create row processor to handle the header of the data
         var rowProcessor = GetRowProcessor();
 
         // read the training and testing dataset
-        var trainData = new CSVDataSource<>(Paths.get(System.getProperty("user.dir"), "\\Train Random Walks.csv"), rowProcessor, true);
-        var testData = new CSVDataSource<>(Paths.get(System.getProperty("user.dir"), "\\Test Random Walks.csv"), rowProcessor, true);
+        var trainData = new CSVDataSource<>(Paths.get(System.getProperty("user.dir"), "\\Train Embeddings RW.csv"), rowProcessor, true);
+        var testData = new CSVDataSource<>(Paths.get(System.getProperty("user.dir"), "\\Test Embeddings RW.csv"), rowProcessor, true);
 
-        // generate Tribuo form data portions of the read dataset
+        // generate Tribute form data portions of the read dataset
         var train = new MutableDataset<>(trainData);
         var test = new MutableDataset<>(testData);
 
@@ -89,6 +82,31 @@ public class ClassificationMain implements RetrieveResourceAllocationAndTopAlloc
         var sTime = 0L;
         var eTime = 0L;
 
+        var mlpGraph0 = new ResMlp((long) train.getFeatureMap().size(), (long) train.getOutputInfo().size(), 250L);
+        var mlpOptimizer0 = GradientOptimiser.GRADIENT_DESCENT;
+        var mlpOptimizerParameters0 = Map.of("learningRate", 0.01f);
+        var TF_Trainer_MLP0 = new TensorFlowTrainer<>(mlpGraph0.getModel().graphDef,
+                mlpGraph0.getModel().outputName,
+                mlpOptimizer0,
+                mlpOptimizerParameters0,
+                new DenseFeatureConverter(mlpGraph0.getModel().inputName),
+                new LabelConverter(),
+                16,
+                100,
+                16,
+                -1);
+        var TF_MLP_Learner0 = TF_Trainer_MLP0.train(train);
+        sTime = System.currentTimeMillis();
+        Evaluator = new LabelEvaluator().evaluate(TF_MLP_Learner0, test);
+        eTime = System.currentTimeMillis();
+        System.out.println("----------------MLP Performance\n" + Evaluator +
+                "\n----------------Confusion Matrix \n" + Evaluator.getConfusionMatrix() +
+                "\n" + "Duration Time is : " + Util.formatDuration(sTime, eTime) + "\n\n");
+        System.out.println("The acc based on the hit at K is : " + hitAt_K(test, TF_MLP_Learner0, map, performanceMatrix, k).get(0));
+        System.out.println("The average performance is : " + hitAt_K(test, TF_MLP_Learner0, map, performanceMatrix, k).get(1));
+
+        System.exit(0);
+
         // define, train, and test LeNet-5
         var inputName = "LeNet5";
         var LeNet_5 = CNNExamples.buildLeNetGraph(inputName, 32, 255, train.getOutputs().size());
@@ -101,18 +119,19 @@ public class ClassificationMain implements RetrieveResourceAllocationAndTopAlloc
                 new ImageConverter(inputName, 32, 32, 1),
                 new LabelConverter(),
                 16,
-                10,
+                20,
                 16,
                 -1);
         var TF_Learner = TF_Trainer.train(train);
         sTime = System.currentTimeMillis();
-        Evaluator = new LabelEvaluator().evaluate(TF_Learner, test);
+        Evaluator = new LabelEvaluator().evaluate(TF_Learner, test); //degreeCentralityWithMarkovBlanket by degreeCentralityWithInDegreeNodes
         eTime = System.currentTimeMillis();
         System.out.println("----------------LeNet-5 Performance\n" + Evaluator +
                 "\n----------------Confusion Matrix \n" + Evaluator.getConfusionMatrix() +
                 "\n" + "Duration Time is : " + Util.formatDuration(sTime, eTime) + "\n\n");
         System.out.println("The acc based on the hit at K is : " + hitAt_K(test, TF_Learner, map, performanceMatrix, k).get(0));
         System.out.println("The average performance is : " + hitAt_K(test, TF_Learner, map, performanceMatrix, k).get(1));
+        System.out.println("The Std is : " + hitAt_K(test, TF_Learner, map, performanceMatrix, k).get(2));
 
         var inName = "MLP";
         var mlpGraph = MLPExamples.buildMLPGraph(inName, train.getFeatureMap().size(), new int[] {300, 200, 30}, train.getOutputs().size());
@@ -149,7 +168,7 @@ public class ClassificationMain implements RetrieveResourceAllocationAndTopAlloc
                 "\n" + "Duration Time is : " + Util.formatDuration(sTime, eTime) + "\n\n");
         System.out.println("The acc based on the hit at K is : " + hitAt_K(test, FMLearner, map, performanceMatrix, k).get(0));
         System.out.println("The average performance is : " + hitAt_K(test, FMLearner, map, performanceMatrix, k).get(1));
-
+        System.out.println("The Std is : " + hitAt_K(test, FMLearner, map, performanceMatrix, k).get(2));
                 // define, train, and test SVM classifier
         var SVMTrainer = new KernelSVMTrainer(new Linear(), 0.1, 1, Trainer.DEFAULT_SEED);
         var SVMLearner = SVMTrainer.train(train);
@@ -161,6 +180,7 @@ public class ClassificationMain implements RetrieveResourceAllocationAndTopAlloc
                 "\n" + "Duration Time is : " + Util.formatDuration(sTime, eTime) + "\n\n");
         System.out.println("The acc based on the hit at K is : " + hitAt_K(test, SVMLearner, map, performanceMatrix, k).get(0));
         System.out.println("The average performance is : " + hitAt_K(test, SVMLearner, map, performanceMatrix, k).get(1));
+        System.out.println("The Std is : " + hitAt_K(test, SVMLearner, map, performanceMatrix, k).get(2));
 
         // define, train, and test LR classifier
         var LRTrainer = new LogisticRegressionTrainer();
@@ -211,6 +231,7 @@ public class ClassificationMain implements RetrieveResourceAllocationAndTopAlloc
                 "\n" + "Duration Time is : " + Util.formatDuration(sTime, eTime) + "\n\n");
         System.out.println("The acc based on the hit at K is : " + hitAt_K(test, LibLinLearner, map, performanceMatrix, k).get(0));
         System.out.println("The average performance is : " + hitAt_K(test, LibLinLearner, map, performanceMatrix, k).get(1));
+        System.out.println("The Std is : " + hitAt_K(test, LibLinLearner, map, performanceMatrix, k).get(2));
 
                 // define, train, and test XGBoost classifier
         var XGBTrainer = new XGBoostClassificationTrainer(10);
@@ -223,6 +244,7 @@ public class ClassificationMain implements RetrieveResourceAllocationAndTopAlloc
                 "\n" + "Duration Time is : " + Util.formatDuration(sTime, eTime) + "\n\n");
         System.out.println("The acc based on the hit at K is : " + hitAt_K(test, XGBLearner, map, performanceMatrix, k).get(0));
         System.out.println("The average performance is : " + hitAt_K(test, XGBLearner, map, performanceMatrix, k).get(1));
+        System.out.println("The Std is : " + hitAt_K(test, XGBLearner, map, performanceMatrix, k).get(2));
 
         // define, train, and test MNB classifier
         var MNBTrainer = new MultinomialNaiveBayesTrainer();
@@ -256,7 +278,11 @@ public class ClassificationMain implements RetrieveResourceAllocationAndTopAlloc
         var ClassProcessor = new FieldResponseProcessor<>("Class", "nan", new LabelFactory());
 
         // return the row processor of the generated labels
-        return new RowProcessor.Builder<Label>().setRegexMappingProcessors(FeatureProcessor).setFieldProcessors(fieldProcessor).build(ClassProcessor);
+        return new RowProcessor
+                .Builder<Label>()
+                .setRegexMappingProcessors(FeatureProcessor)
+                .setFieldProcessors(fieldProcessor)
+                .build(ClassProcessor);
     }
 
     static List<Double> hitAt_K(MutableDataset<Label> testPart, Model<Label> trainedModel, HashMap<String, ArrayList<String>> map, HashMap<String, List<String>> performanceMatrix, int top_K) {
@@ -265,6 +291,8 @@ public class ClassificationMain implements RetrieveResourceAllocationAndTopAlloc
         }
         double accuracy = 0.0;
         double avgAllocationPerformance = 0d;
+        double[] costRelativeReductionVal = new double[testPart.size()];
+        int counter = 0;
         for (Example<Label> sample : testPart.getData()) {
             String[] instanceWords = sample.
                     toString().
@@ -288,9 +316,19 @@ public class ClassificationMain implements RetrieveResourceAllocationAndTopAlloc
             }
             var index = performanceMatrix.get("Allocation").stream().map(String::toUpperCase).toList().indexOf(prediction.toUpperCase());
             var costRelativeReduction = performanceMatrix.get(graphID).get(index);
+            costRelativeReductionVal[counter] = Double.parseDouble(costRelativeReduction);
+            counter++;
             avgAllocationPerformance += Double.parseDouble(costRelativeReduction);
         }
-        return List.of(accuracy / testPart.getData().size(), avgAllocationPerformance / testPart.getData().size());
+        // This variable will hold the sum of squared deviations from the mean (variance calculation).
+        double innerPart = 0;
+        // Iterate over each value in the costRelativeReductionVal (CRVal represents each data point)
+        for (double CRVal : costRelativeReductionVal) {
+            innerPart += Math.pow((CRVal - avgAllocationPerformance / testPart.size()), 2); // Squared deviation from the mean
+        }
+        // Calculate the standard deviation (for population std, use size of the data set)
+        double Std = Math.sqrt(innerPart / (costRelativeReductionVal.length));
+        System.out.println(Arrays.toString(costRelativeReductionVal));
+        return List.of(accuracy / testPart.getData().size(), avgAllocationPerformance / testPart.getData().size(), Std);
     }
 }
-
