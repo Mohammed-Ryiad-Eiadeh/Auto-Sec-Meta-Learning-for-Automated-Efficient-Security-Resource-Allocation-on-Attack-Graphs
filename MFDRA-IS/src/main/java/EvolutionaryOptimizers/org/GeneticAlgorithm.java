@@ -67,9 +67,6 @@ public class GeneticAlgorithm extends FitnessFunction {
         for (int iter = 0; iter < maxIter; iter++) {
             RandomSelection_Tournament(population);
             for (int i = 0; i < population.size(); i++) {
-                List<Integer> chromosome1 = new ArrayList<>(population.get(new Random().nextInt(population.size())));
-                List<Integer> chromosome2 = new ArrayList<>(population.get(new Random().nextInt(population.size())));
-                Crossover(chromosome1, chromosome2);
                 population.set(i, Mutation(population.get(i)));
             }
             convergenceCurve [iter] = super.evaluateAllSolution(population);
@@ -108,41 +105,6 @@ public class GeneticAlgorithm extends FitnessFunction {
         solution.addAll(sol);
         s.clear();
         return solution;
-    }
-
-    /**
-     * This method is used to apply crossover on two given parents
-     * @param solution1 The first parent
-     * @param solution2 The second parent
-     */
-    private void Crossover(List<Integer> solution1, List<Integer> solution2) {
-        if (solution1 == null || solution2 == null) {
-            throw new IllegalArgumentException("One of the parents are null");
-        }
-        List<Integer> child1 = new LinkedList<>();
-        List<Integer> child2 = new LinkedList<>();
-        Label :
-        for (int i = 1; i < solution1.size() - 1; i++) {
-            for (int j = 1; j < solution2.size() - 1; j++) {
-                if (!solution1.get(i).equals(solution2.get(j))) {
-                    if (new Random().nextDouble() > crossOverProb) {
-                        child1.addAll(solution1.subList(0, i));
-                        child1.addAll(solution2.subList(j, solution2.size()));
-                        child2.addAll(solution2.subList(0, j));
-                        child2.addAll(solution1.subList(i, solution1.size()));
-                        List<Integer> s1 = new ArrayList<>(super.evaluateSolution(child1) > super.evaluateSolution(solution1)
-                                ? child1 : solution1);
-                        List<Integer> s2 = new ArrayList<>(super.evaluateSolution(child2) > super.evaluateSolution(solution2)
-                                ? child2 : solution2);
-                        solution1.clear();
-                        solution2.clear();
-                        solution1.addAll(s1);
-                        solution2.addAll(s2);
-                        break Label;
-                    }
-                }
-            }
-        }
     }
 
     /**
