@@ -48,19 +48,16 @@ public class ResourceAllocationMain implements StoreDataAsTable {
             var AdjMat = task.getAdjacencyMatrix(attackDefenceGraph);
             var assetLossVec = task.getNodeAssetsLossValues();
 
-            /**
- * Executes the evolutionary optimization process using tournament selection
- * and mutation.
- *
- * Note: Although crossover was described in the published methodology,
- * the original implementation performed crossover on independent copies
- * of chromosomes without updating the population. Consequently, crossover
- * did not contribute to the evolutionary updates in the reported experiments. Yet, does not affect results
- *
- * Crossover has therefore been removed from this implementation to preserve
- * consistency with the effective optimization behavior used in the
- * published experimental results.
- */
+            
+        /**
+         * Note: Although crossover was included in the published methodology,
+         * it has been removed because, in the original implementation, it did
+         * not update the population under the implemented conditions.
+         * Consequently, crossover introduced unnecessary computational overhead
+         * without contributing to the evolutionary process. Its removal preserves
+         * the effective optimization behavior and maintains consistency with
+         * the published experimental results.
+         */
             var concurrentAttackers = new ConcurrentAttack(AdjMat,
                 assetLossVec,
                 250,
